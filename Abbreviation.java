@@ -12,8 +12,8 @@ public class Abbreviation {
         char[] charArray = chinese.toCharArray();
         StringBuilder pinyin = new StringBuilder();
         HanyuPinyinOutputFormat defaultFormat = new HanyuPinyinOutputFormat();
-        // 设置大小写格式
-        defaultFormat.setCaseType(HanyuPinyinCaseType.UPPERCASE);
+        // 设置为小写格式
+        defaultFormat.setCaseType(HanyuPinyinCaseType.LOWERCASE);
         // 设置声调格式
         defaultFormat.setToneType(HanyuPinyinToneType.WITHOUT_TONE);
         for (int i = 0; i < charArray.length; i++) {
@@ -24,9 +24,12 @@ public class Abbreviation {
                     pinyin.append(hanyuPinyinStringArray[0].charAt(0));
                 }
             }
+            //匹配数字和字母，将其在对应位置保留
+            if (Character.toString(charArray[i]).matches("[A-Za-z0-9]+")) {
+                pinyin.append(charArray[i]);
+            }
         }
-        String result = pinyin.toString().toLowerCase();
-        return result;
+        return pinyin.toString();
 	}
 }
 
