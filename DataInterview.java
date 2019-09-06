@@ -243,27 +243,18 @@ public class DataInterview {
     	return true;
     }
     
-    //该函数用于查house表，按时间排序，20190904龚灿
-    public static ArrayList<TableHouse> tableHouse() throws SQLException {
-    	ArrayList<TableHouse> table = new ArrayList<TableHouse>();
+    //该函数用于查house表，按时间排序，20190906龚灿
+    public static ArrayList<String> tableTime() throws SQLException {
+    	ArrayList<String> time = new ArrayList<String>();
     	Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	String sql = "SELECT * from house order by time";
+    	String sql = "SELECT distinct(time) as time from house order by time";
     	ResultSet rs = statement.executeQuery(sql);
-    	while(rs.next()) {
-    		TableHouse record = new TableHouse();
-    		record.id = rs.getInt("id");
-    		record.bCode = rs.getInt("bCode");
-    		record.type = rs.getString("type");
-    		record.time = DateOperation.getStringDate(rs.getDate("time"));
-    		record.price = rs.getInt("price");
-    		record.area = rs.getInt("area");
-    		record.photo = rs.getString("photo");
-    		table.add(record);
-    	}
+    	while(rs.next())
+    		time.add(DateOperation.getStringDate(rs.getDate("time")));
     	statement.close();
     	connection.close();
-		return table;
+		return time;
     }
     
     //该函数判断用户输入的pos具体是什么位置信息，并以不同方式调用queryCity，20190824龚灿
@@ -453,6 +444,7 @@ public class DataInterview {
 		build.photo = rs.getString("photo");
 		build.addr = rs.getString("address");
 		build.url = rs.getString("url");
+		build.firstTime = DateOperation.getDate(DateOperation.getPastFirst(11));
 		sql = "SELECT * from cityCode where code="+code;
 		rs = statement.executeQuery(sql);
 		rs.next();
@@ -489,7 +481,6 @@ public class DataInterview {
 		if(bnumber!=0)
 			build.value = btotal/bnumber;
 		build.values = getValues(bCo);
-		build.firstTime = DateOperation.getDate(DateOperation.getPastFirst(11));
 		statement.close();
     	connection.close();
     	return build;
