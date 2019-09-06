@@ -160,48 +160,49 @@ public class DataInterview {
     	connection.close();
     	return result;//结果为0说明该区域不存在
 	}
-
-	//该函数用于管理员查询新楼盘，20190904，测试成功
+	
+	//该函数用于辅助生成静态页面，20190906龚灿，测试成功
+	public static int queryMaxBCode() throws SQLException {
+		Connection connection = DriverManager.getConnection(sqlurl);
+    	Statement statement = connection.createStatement();
+    	String sql = "SELECT max(bCode) as bCode from buildCode";
+    	ResultSet rs = statement.executeQuery(sql);
+    	rs.next();
+    	int max = rs.getInt("bCode");
+    	statement.close();
+    	connection.close();
+    	return max;
+	}
+	
+	//该函数用于管理员查询新楼盘，20190904龚灿，测试成功
 	public static HashMap<String, String> queryNewBuild() {
 		return newBuild;
 	}
 	
-	//该函数用于添加楼盘对应的静态网址，20190904龚灿
-	//输入为区域，楼盘，网址
-	public static boolean addUrl(String reg, String bui, String url) throws SQLException {
-		int bCode = queryBuilding(reg, bui);
-		//该区域不存在
-		if(bCode==0) {
-			if(!newBuild.containsKey(bui))
-				newBuild.put(bui, reg);
-			return false;
-		}
+	//该函数用于添加楼盘对应的静态网址，20190904龚灿，测试成功
+	//输入为楼盘编号，网址
+	public static void addUrl(int bCo, String url) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	String sql = "SELECT url from buildCode where bCode="+bCode;
-    	ResultSet rs = statement.executeQuery(sql);
-    	rs.next();
+    	String sql = "UPDATE buildCode SET url='"+url+"' where bCode="+bCo;
+    	statement.executeUpdate(sql);
     	statement.close();
     	connection.close();
-		return true;
 	}
 	
 	//该函数用于在数据库表buildCode中查询某楼盘的静态网址，20190904龚灿
-	//输入为区域，楼盘
-	public static String queryUrl(String reg, String bui) throws SQLException {
-		int bCode = queryBuilding(reg, bui);
-		//该区域不存在
-		if(bCode==0)
-			return null;
+	//输入为楼盘编号
+	public static String queryUrl(int bCo) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	String sql = "SELECT url from buildCode where bCode="+bCode;
+    	String sql = "SELECT url from buildCode where bCode="+bCo;
     	ResultSet rs = statement.executeQuery(sql);
-    	rs.next();
-    	String urlString = rs.getString("url");
+    	String urlString = new String();
+    	if(rs.next())
+    		urlString = rs.getString("url");
     	statement.close();
     	connection.close();
-    	return urlString;//结果为0说明该区域不存在
+    	return urlString;//结果为null说明该区域不存在
 	}
 	
 	//该函数用于向数据库house中插入一整行城市区域小区房价信息，20190827龚灿，测试成功
@@ -439,27 +440,25 @@ public class DataInterview {
 	}
 	
 	//该函数用于预测楼盘房价并返回楼盘所有具体信息，20190905龚灿，测试成功
-	//输入为区域，楼盘
-	public static Building foreseeBuild(String reg, String bui) throws SQLException, ParseException {
-		int bCode = queryBuilding(reg, bui);
-		//该区域不存在
-		if(bCode==0) {
-			if(!newBuild.containsKey(bui))
-				newBuild.put(bui, reg);
-			return null;
-		}
+	//输入为楼盘编号
+	public static Building foreseeBuild(int bCo) throws SQLException, ParseException {
 		Building build = new Building();
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-		String sql = "SELECT building,photo,address,url from buildCode where bCode="+bCode;
+		String sql = "SELECT code,building,photo,address,url from buildCode where bCode="+bCo;
 		ResultSet rs = statement.executeQuery(sql);
 		rs.next();
+		int code = rs.getInt("code");
 		build.name = rs.getString("building");
 		build.photo = rs.getString("photo");
 		build.addr = rs.getString("address");
 		build.url = rs.getString("url");
+		sql = "SELECT * from cityCode where code="+code;
+		rs = statement.executeQuery(sql);
+		rs.next();
+		build.addr = rs.getString("city")+rs.getString("region")+build.addr;
 		//取最近更新数据的时间
-		sql = "SELECT top 1 time from house where bCode="+bCode+" order by time desc";
+		sql = "SELECT top 1 time from house where bCode="+bCo+" order by time desc";
 		rs = statement.executeQuery(sql);
 		if(!rs.next()) {
 			for(int i=0;i<14;i++)
@@ -470,7 +469,7 @@ public class DataInterview {
 		}
 		String time = DateOperation.getStringDate(rs.getDate("time"));
 		//获取最近更新的平均价格
-		sql = "SELECT type,price,area,photo from house where bCode="+bCode+" and time='"+time+"'";
+		sql = "SELECT type,price,area,photo from house where bCode="+bCo+" and time='"+time+"'";
 		rs = statement.executeQuery(sql);
 		int btotal = 0, bnumber = 0;
 		int tnumber = 1;
@@ -489,7 +488,7 @@ public class DataInterview {
 		}
 		if(bnumber!=0)
 			build.value = btotal/bnumber;
-		build.values = getValues(bCode);
+		build.values = getValues(bCo);
 		build.firstTime = DateOperation.getDate(DateOperation.getPastFirst(11));
 		statement.close();
     	connection.close();
@@ -524,8 +523,8 @@ public class DataInterview {
 
 	//该函数用于房价对比功能，寻找到价格区间内的楼盘并将其相关信息返回，20190906龚灿，测试成功
 	//输入为价格区间
-	public static ArrayList<DataPacket> compareBuild(int min, int max) throws SQLException {
-		ArrayList<DataPacket> packets = new ArrayList<DataPacket>();
+	public static ArrayList<Building> compareBuild(int min, int max) throws SQLException {
+		ArrayList<Building> buildings = new ArrayList<Building>();
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
 	   	String sql = "SELECT top 1 time from house order by time desc";
@@ -538,8 +537,6 @@ public class DataInterview {
 	   	while(rs.next())
 	   		bCodes.add(rs.getInt("bCode"));
 		for(int bCode : bCodes) {
-			DataPacket dataPacket = new DataPacket();
-			Region region = new Region();
 			Building build = new Building();
 			sql = "SELECT * from buildCode where bCode="+bCode;
 			rs = statement.executeQuery(sql);
@@ -554,19 +551,16 @@ public class DataInterview {
 			rs = statement.executeQuery(sql);
 			rs.next();
 			build.value = rs.getInt("price");
-			region.type.add(build);
 	    	sql = "SELECT * from cityCode where code="+code;
 	    	rs = statement.executeQuery(sql);
 	    	rs.next();
 	    	//记录下该楼盘的具体城市区域
-	    	region.name = rs.getString("region");
-	    	dataPacket.type.add(region);
-	    	dataPacket.name = rs.getString("city");
-	    	packets.add(dataPacket);
+	    	build.addr = rs.getString("city")+rs.getString("region")+build.addr;
+	    	buildings.add(build);
 		}
 		statement.close();
 		connection.close();
-	   	return packets;
+	   	return buildings;
 	}
 	
 	//该函数为登录函数，20190903龚灿，测试成功
