@@ -37,13 +37,13 @@ public class Foresee {
 		for(int i=0;i<12;i++)
 			if(values[i]!=0)
 				nonZero.add(i);
-		
+		/*
 		System.out.println(nonZero.size());
 		for(int k : nonZero) {
 			System.out.println(k);
 			System.out.println(values[k]);
 		}
-		
+		*/
 		Matrix leftMatrix = new Matrix(n+1, n+1);
 		Matrix rightMatrix = new Matrix(n+1, 1);
 		for(int i=1;i<=leftMatrix.xsize;i++) {
