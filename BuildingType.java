@@ -5,5 +5,5 @@ public class BuildingType {
 	public int value = 0;//户型价格
 	public int area = 0;//建面
 	public String url = new String();//图片
-	public int id = 0;
+	public int id = 1;
 }
