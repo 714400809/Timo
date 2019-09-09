@@ -30,6 +30,10 @@ public class DataInterview {
 	//该函数用于向数据库cityCode中插入记录，20190823龚灿，测试成功
 	//输入分别为：市，区域
 	public static boolean addCity(String cit, String reg) throws SQLException {
+		if(!chineseFilter(cit))
+			return false;
+		if(!chineseFilter(reg))
+			return false;
 		//统一格式
     	if(cit.charAt(cit.length()-1)=='市')
     		cit = cit.substring(0, cit.length()-1);
@@ -60,6 +64,8 @@ public class DataInterview {
 	//该函数用于在数据库cityCode中删除记录，20190823龚灿，测试成功
 	//输入为：市或区域
 	public static void deleteCity(String pos) throws SQLException {
+		if(!chineseFilter(pos))
+			return;
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
     	String sql = "DELETE from cityCode where city=N'"+pos+"'";
@@ -71,8 +77,10 @@ public class DataInterview {
 	}
 	
 	//该函数用于向数据库cityCode中查询区域对应的区域编号，20190823龚灿，测试成功
-	//输入为：区域
-	private static int queryRegion(String reg) throws SQLException {
+	//输入为：城市，区域
+	private static int queryCityCode(String cit, String reg) throws SQLException {
+		if(cit.charAt(cit.length()-1)=='市')
+    		cit = cit.substring(0, cit.length()-1);
 		char r = reg.charAt(reg.length()-1);
     	if(r=='县'||r=='区'||r=='市') {
     		reg = reg.substring(0, reg.length()-1);
@@ -81,7 +89,7 @@ public class DataInterview {
     	}
     	Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	String sql = "SELECT code from cityCode where region=N'"+reg+"'";
+    	String sql = "SELECT code from cityCode where city=N'"+cit+"' and region=N'"+reg+"'";
     	ResultSet rs = statement.executeQuery(sql);
     	int result = 0;
     	if(rs.next())
@@ -93,8 +101,14 @@ public class DataInterview {
 	
 	//该函数用于向数据库buildCode中插入记录，20190827龚灿，测试成功
 	//输入分别为：区域，楼盘，图片路径，具体地址
-	public static boolean addBuilding(String reg, String bui, String photo, String add) throws SQLException {
-		int code = queryRegion(reg);
+	public static boolean addBuilding(String cit, String reg, String bui, String photo, String add) throws SQLException {
+		if(!chineseFilter(cit) || !chineseFilter(reg))
+			return false;
+		if(!sicknameFilter(bui) || !sicknameFilter(add))
+			return false;
+		if(!urlFilter(photo))
+			return false;
+		int code = queryCityCode(cit, reg);
 		//该区域不存在
 		if(code==0) {
 			//将新楼盘暂存于哈希表中供管理员管理
@@ -142,20 +156,36 @@ public class DataInterview {
     	return true;
 	}
 	
-	//该函数用于向数据库buildCode中查询楼盘对应的楼盘编号，20190828龚灿，测试成功
+	//该函数用于向数据库buildCode中查询楼盘对应的楼盘编号，20190909龚灿，测试成功
 	//输入为：区域，楼盘
-	private static int queryBuilding(String reg, String bui) throws SQLException {
-		int code = queryRegion(reg);
-		//该区域不存在
-		if(code==0)
-			return 0;
+	private static int queryBCode(String reg, String bui) throws SQLException {
+		char r = reg.charAt(reg.length()-1);
+    	if(r=='县'||r=='区'||r=='市') {
+    		reg = reg.substring(0, reg.length()-1);
+    		if(reg.length()-2>=0 && reg.substring(reg.length()-2).compareTo("自治")==0)
+    			reg = reg.substring(0, reg.length()-2);
+    	}
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	String sql = "SELECT bCode from buildCode where code="+code+" and building=N'"+bui+"'";
+    	ArrayList<Integer> codes = new ArrayList<Integer>();
+    	String sql = "SELECT code from cityCode where region=N'"+reg+"'";
     	ResultSet rs = statement.executeQuery(sql);
+    	while(rs.next())
+    		codes.add(rs.getInt("code"));
+    	if(codes.size()==0) {
+    		statement.close();
+        	connection.close();
+        	return 0;//结果为0说明该区域不存在
+    	}
     	int result = 0;
-    	if(rs.next())
-    		result = rs.getInt("bCode");
+    	for(int code : codes) {
+    		sql = "SELECT bCode from buildCode where code="+code+" and building=N'"+bui+"'";
+    		rs = statement.executeQuery(sql);
+    		if(rs.next()) {
+        		result = rs.getInt("bCode");
+        		break;
+    		}
+    	}
     	statement.close();
     	connection.close();
     	return result;//结果为0说明该区域不存在
@@ -182,6 +212,8 @@ public class DataInterview {
 	//该函数用于添加楼盘对应的静态网址，20190904龚灿，测试成功
 	//输入为楼盘编号，网址
 	public static void addUrl(int bCo, String url) throws SQLException {
+		if(!urlFilter(url))
+			return;
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
     	String sql = "UPDATE buildCode SET url='"+url+"' where bCode="+bCo;
@@ -205,11 +237,46 @@ public class DataInterview {
     	return urlString;//结果为null说明该区域不存在
 	}
 	
+	//该函数专用于每天计算每个楼盘的当前均价，20190908龚灿
+	public static void updateAverage() throws SQLException {
+		int max = queryMaxBCode();
+		Connection connection = DriverManager.getConnection(sqlurl);
+    	Statement statement = connection.createStatement();
+    	String sql = new String();
+    	ResultSet rs;
+    	for(int bCo=1;bCo<=max;bCo++) {
+    		//取最近更新数据的时间
+    		sql = "SELECT top 1 time from house where bCode="+bCo+" order by time desc";
+    		rs = statement.executeQuery(sql);
+    		if(!rs.next()) {
+    			sql = "UPDATE buildCode SET average=0 where bCode="+bCo;
+    			statement.executeUpdate(sql);
+    			continue;
+    		}
+    		String time = DateOperation.getStringDate(rs.getDate("time"));
+    		//获取最近更新的平均价格
+    		sql = "SELECT avg(price) as price from house where bCode="+bCo+" and time='"+time+"'";
+    		rs = statement.executeQuery(sql);
+    		rs.next();
+    		int num = rs.getInt("price");
+    		sql = "UPDATE buildCode SET average="+num+" where bCode="+bCo;
+			statement.executeUpdate(sql);
+    	}
+    	statement.close();
+    	connection.close();
+	}
+	
 	//该函数用于向数据库house中插入一整行城市区域小区房价信息，20190827龚灿，测试成功
-	//输入分别为：区域，楼盘，户型，时间，房价，面积，图片路径
+	//输入分别为：城市，区域，楼盘，户型，时间，房价，面积，图片路径
     public static boolean addHouse(String reg, String bui, String typ, String tim, 
     		int pri, int are, String url) throws SQLException, ParseException{
-    	int bCode = queryBuilding(reg, bui);//查询楼盘编号并插入到house的bCode字段
+    	if(!chineseFilter(reg))
+    		return false;
+    	if(!sicknameFilter(bui) || !sicknameFilter(typ))
+    		return false;
+    	if(!urlFilter(url))
+    		return false;
+    	int bCode = queryBCode(reg, bui);//查询楼盘编号并插入到house的bCode字段
     	if(bCode==0) {
 			if(!newBuild.containsKey(bui))
 				newBuild.put(bui, reg);
@@ -243,6 +310,25 @@ public class DataInterview {
     	return true;
     }
     
+    //该函数用于管理员更正错误数据或不合理数据，20190909龚灿
+    //输入为区域，楼盘名，户型，新价格，新建面
+    public static boolean updateHouse(String reg, String bui, String typ, int pri, int are) throws SQLException {
+    	if(!chineseFilter(reg))
+    		return false;
+    	if(!sicknameFilter(bui) || !sicknameFilter(typ))
+    		return false;
+    	int bCode = queryBCode(reg, bui);
+    	if(bCode==0)
+    		return false;
+    	Connection connection = DriverManager.getConnection(sqlurl);
+    	Statement statement = connection.createStatement();
+    	String sql = "UPDATE house SET price="+pri+",area="+are+" where bCode="+bCode+" and type=N'"+typ+"'";
+    	statement.executeUpdate(sql);
+    	statement.close();
+    	connection.close();
+    	return true;
+    }
+    
     //该函数用于查house表，按时间排序，20190906龚灿
     public static ArrayList<String> tableTime() throws SQLException {
     	ArrayList<String> time = new ArrayList<String>();
@@ -260,42 +346,48 @@ public class DataInterview {
     //该函数判断用户输入的pos具体是什么位置信息，并以不同方式调用queryCity，20190824龚灿
     //输入为：市或区域或楼盘
     public static DataPacket[] queryAll(String pos) throws SQLException, ParseException{
-    	String snt = new String(pos);
+    	if(!chineseFilter(pos))
+    		return null;
     	Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-    	if(snt.charAt(snt.length()-1)=='市')
-    		snt = snt.substring(0, snt.length()-1);
-    	String sql = "SELECT code from cityCode where city=N'"+snt+"'";
+    	if(pos.charAt(pos.length()-1)=='市')
+    		pos = pos.substring(0, pos.length()-1);
+    	String sql = "SELECT code from cityCode where city=N'"+pos+"'";
     	ResultSet rs = statement.executeQuery(sql);
     	//pos为城市名
     	if(rs.next()) {
     		System.out.println("城市");
     		DataPacket[] packet = new DataPacket[1];
-    		packet[0] = queryCity(snt);
+    		packet[0] = queryCity(pos);
     		statement.close();
         	connection.close();
     		return packet;
     	}
     	else {
-    		char r = snt.charAt(snt.length()-1);
+    		char r = pos.charAt(pos.length()-1);
         	if(r=='县'||r=='区'||r=='市') {
-        		snt = snt.substring(0, snt.length()-1);
-        		if(snt.substring(snt.length()-2).compareTo("自治")==0)
-        			snt = snt.substring(0, snt.length()-2);
+        		pos = pos.substring(0, pos.length()-1);
+        		if(pos.substring(pos.length()-2).compareTo("自治")==0)
+        			pos = pos.substring(0, pos.length()-2);
         	}
-    		sql = "SELECT city from cityCode where region=N'"+snt+"'";
+    		sql = "SELECT city from cityCode where region=N'"+pos+"'";
     		rs = statement.executeQuery(sql);
     		//pos为区域名
     		if(rs.next()) {
     			System.out.println("区域");
-    			DataPacket[] packet = new DataPacket[1];
-        		packet[0] = queryCity(rs.getString("city"));
+    			ArrayList<String> cities = new ArrayList<String>();
+    			cities.add(rs.getString("city"));
+    			while(rs.next())
+    				cities.add(rs.getString("city"));
+    			DataPacket[] packet = new DataPacket[cities.size()];
+    			for(int i=0;i<cities.size();i++)
+    				packet[i] = queryRegion(cities.get(i), pos);
         		statement.close();
             	connection.close();
         		return packet;
     		}
     		else {
-    			sql = "SELECT bCode from buildCode where building=N'"+snt+"'";
+    			sql = "SELECT bCode from buildCode where building=N'"+pos+"'";
         		rs = statement.executeQuery(sql);
         		if(!rs.next()) {
         			System.out.println("错误");
@@ -321,67 +413,30 @@ public class DataInterview {
     	}
     }
 
-    //该函数用于获取特定城市的所有房价信息，20190827龚灿，测试成功
+    //该函数用于获取特定城市的所有房价信息，20190827龚灿
     //输入为城市名
-	public static DataPacket queryCity(String cit) throws SQLException, ParseException {
+	private static DataPacket queryCity(String cit) throws SQLException, ParseException {
 		// TODO Auto-generated method stub
 		DataPacket dataPacket = new DataPacket();
 		dataPacket.name = cit;
-		//记录该城市下所有<区域名，区域编号>
-		HashMap<String,Integer> cityCodes = new HashMap<String,Integer>();
+		//记录该城市下所有<区域编号，区域名>
+		HashMap<Integer, String> cityCodes = new HashMap<Integer, String>();
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
     	String sql = "SELECT code,region from cityCode where city=N'"+cit+"'";
     	ResultSet rs = statement.executeQuery(sql);
     	while(rs.next())
-    		cityCodes.put(rs.getString("region"), rs.getInt("code"));
+    		cityCodes.put(rs.getInt("code"), rs.getString("region"));
     	int rnumber = 1;
     	//对于每一个区域
-    	for(Map.Entry<String,Integer> m : cityCodes.entrySet()) {
+    	for(Map.Entry<Integer, String> m : cityCodes.entrySet()) {
     		Region region = new Region();
-    		region.name = m.getKey();
+    		region.name = m.getValue();
     		region.id = rnumber;
-    		//记录该区域下的所有楼盘编号
-    		ArrayList<Integer> buildCodes = new ArrayList<Integer>();
-    		sql = "SELECT bCode from buildCode where code="+m.getValue();
+    		sql = "SELECT avg(average) as average from buildCode where code="+m.getKey();
     		rs = statement.executeQuery(sql);
-    		while(rs.next())
-    			buildCodes.add(rs.getInt("bCode"));
-    		int rtotal = 0, rcount = 0;
-    		int bnumber = 1;
-    		//对于每一个楼盘
-    		for(int n : buildCodes) {
-    			Building build = new Building();
-    			sql = "SELECT building,photo,address,url from buildCode where bCode="+n;
-    			rs = statement.executeQuery(sql);
-    			rs.next();
-    			build.name = rs.getString("building");
-    			build.photo = rs.getString("photo");
-    			build.addr = rs.getString("address");
-    			build.url = rs.getString("url");
-    			build.id = bnumber;
-        		bnumber++;
-    			//取最近更新数据的时间
-    			sql = "SELECT top 1 time from house where bCode="+n+" order by time desc";
-        		rs = statement.executeQuery(sql);
-        		//没有该楼盘的具体数据则跳过
-        		if(!rs.next())
-        			continue;
-        		String time = DateOperation.getStringDate(rs.getDate("time"));
-        		//获取最近更新的平均价格
-        		sql = "SELECT avg(price) as price from house where bCode="+n+" and time='"+time+"'";
-        		rs = statement.executeQuery(sql);
-        		rs.next();
-        		build.value = rs.getInt("price");
-        		rtotal+=rs.getInt("price");
-        		//记录一个楼盘变量
-        		region.type.add(build);
-        		rcount++;
-    		}
-    		if(rcount!=0)
-    			region.value = rtotal/rcount;
-    		//记录一个区域
-    		dataPacket.type.add(region);
+    		rs.next();
+    		region.value = rs.getInt("average");
     		rnumber++;
     	}
     	statement.close();
@@ -389,9 +444,49 @@ public class DataInterview {
 		return dataPacket;
 	}
 	
+	//此函数用于获取特定区域的所有房价信息，20190908龚灿
+	//输入为城市，区域
+	public static DataPacket queryRegion(String cit, String reg) throws SQLException {
+		if(!chineseFilter(cit) || !chineseFilter(reg))
+			return null;
+		DataPacket dataPacket = new DataPacket();
+		dataPacket.name = cit;
+		dataPacket.id = 1;
+		Region region = new Region();
+		region.name = reg;
+		Connection connection = DriverManager.getConnection(sqlurl);
+    	Statement statement = connection.createStatement();
+    	String sql = "SELECT code from cityCode where city=N'"+cit+"' and region=N'"+reg+"'";
+    	ResultSet rs = statement.executeQuery(sql);
+    	rs.next();
+    	int code = rs.getInt("code");
+    	sql = "SELECT * from buildCode where code="+code;
+    	rs = statement.executeQuery(sql);
+    	int rtotal = 0, rcount = 0;
+    	int bnumber = 1;
+    	//每一行对应一个楼盘
+    	while(rs.next()) {
+    		Building build = new Building();
+			build.name = rs.getString("building");
+			build.value = rs.getInt("average");
+			rtotal+=rs.getInt("average");
+			build.photo = rs.getString("photo");
+			build.addr = rs.getString("address");
+			build.url = rs.getString("url");
+			build.id = bnumber;
+    		bnumber++;
+    		rcount++;
+    		region.type.add(build);
+    	}
+    	if(rcount!=0)
+    		region.value = rtotal/rcount;
+    	dataPacket.type.add(region);
+    	return dataPacket;
+	}
+	
 	//该函数用于获取特定楼盘的所有房价信息，20190905龚灿，测试成功
     //输入为楼盘编号
-	public static DataPacket queryBuild(int bCo) throws SQLException {
+	private static DataPacket queryBuild(int bCo) throws SQLException {
 		DataPacket dataPacket = new DataPacket();
 		Region region = new Region();
 		Building build = new Building();
@@ -400,23 +495,13 @@ public class DataInterview {
 		String sql = "SELECT * from buildCode where bCode="+bCo;
 		ResultSet rs = statement.executeQuery(sql);
 		rs.next();
-		int code = rs.getInt("code");//记录下城市区域编号供后面使用
+		//记录下城市区域编号供后面使用
+		int code = rs.getInt("code");
 		build.name = rs.getString("building");
+		build.value = rs.getInt("average");
 		build.photo = rs.getString("photo");
 		build.addr = rs.getString("address");
 		build.url = rs.getString("url");
-		//取最近更新数据的时间
-		sql = "SELECT top 1 time from house where bCode="+bCo+" order by time desc";
-		rs = statement.executeQuery(sql);
-		//没有该楼盘的具体数据则将其均值记为0
-		if(rs.next()) {
-			String time = DateOperation.getStringDate(rs.getDate("time"));
-			//获取最近更新的平均价格
-			sql = "SELECT avg(price) as price from house where bCode="+bCo+" and time='"+time+"'";
-			rs = statement.executeQuery(sql);
-			rs.next();
-			build.value = rs.getInt("price");
-		}
 		region.type.add(build);
     	sql = "SELECT * from cityCode where code="+code;
     	rs = statement.executeQuery(sql);
@@ -430,17 +515,18 @@ public class DataInterview {
     	return dataPacket;
 	}
 	
-	//该函数用于预测楼盘房价并返回楼盘所有具体信息，20190905龚灿，测试成功
+	//该函数用于预测楼盘房价并返回楼盘所有具体信息，20190905龚灿
 	//输入为楼盘编号
 	public static Building foreseeBuild(int bCo) throws SQLException, ParseException {
 		Building build = new Building();
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
-		String sql = "SELECT code,building,photo,address,url from buildCode where bCode="+bCo;
+		String sql = "SELECT * from buildCode where bCode="+bCo;
 		ResultSet rs = statement.executeQuery(sql);
 		rs.next();
 		int code = rs.getInt("code");
 		build.name = rs.getString("building");
+		build.value = rs.getInt("average");
 		build.photo = rs.getString("photo");
 		build.addr = rs.getString("address");
 		build.url = rs.getString("url");
@@ -463,23 +549,18 @@ public class DataInterview {
 		//获取最近更新的平均价格
 		sql = "SELECT type,price,area,photo from house where bCode="+bCo+" and time='"+time+"'";
 		rs = statement.executeQuery(sql);
-		int btotal = 0, bnumber = 0;
 		int tnumber = 1;
 		//对于每一个户型
 		while(rs.next()) {
 			BuildingType type = new BuildingType();
 			type.name = rs.getString("type");
 			type.value = rs.getInt("price");
-			btotal+=rs.getInt("price");
 			type.area = rs.getInt("area");
 			type.url = rs.getString("photo");
 			type.id = tnumber;
 			build.type.add(type);//添加户型
     		tnumber++;
-    		bnumber++;
 		}
-		if(bnumber!=0)
-			build.value = btotal/bnumber;
 		build.values = getValues(bCo);
 		statement.close();
     	connection.close();
@@ -497,51 +578,80 @@ public class DataInterview {
     	String sql = new String();
     	ResultSet rs;
 		for(int i=11;i>0;--i) {
+			//将前11月的均价赋值
 			sql = "SELECT avg(price) from house where bCode="+bCo+" and time>='"+DateOperation.getPastFirst(i)
 				+"' and time<'"+DateOperation.getPastFirst(i-1)+"'";
 			rs = statement.executeQuery(sql);
 			if(rs.next())
 				values[11-i] = rs.getInt(1);
 		}
+		//将目前当月的均价赋值
 		sql = "SELECT avg(price) from house where bCode="+bCo+" and time>='"+DateOperation.getPastFirst(0)
 			+"' and time<'"+DateOperation.getNextFirst()+"'";
 		rs = statement.executeQuery(sql);
 		if(rs.next())
 			values[11] = rs.getInt(1);
+		//进行预测
 		Foresee.foresee(values);
 		return values;
 	}
 
 	//该函数用于房价对比功能，寻找到价格区间内的楼盘并将其相关信息返回，20190906龚灿，测试成功
 	//输入为价格区间
-	public static ArrayList<Building> compareBuild(int min, int max) throws SQLException {
+	public static ArrayList<Building> compareBuild(int min, int max, String cit) throws SQLException {
 		ArrayList<Building> buildings = new ArrayList<Building>();
+		if(!chineseFilter(cit))
+			return buildings;
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
-	   	String sql = "SELECT top 1 time from house order by time desc";
+	   	if(cit.charAt(cit.length()-1)=='市')
+    		cit = cit.substring(0, cit.length()-1);
+	   	String sql = "SELECT code from cityCode where city=N'"+cit+"'";
 	   	ResultSet rs = statement.executeQuery(sql);
-	   	rs.next();
-	   	String time = DateOperation.getStringDate(rs.getDate("time"));
-	   	sql = "SELECT distinct(bCode) as bCode from house where time='"+time+"' and price>="+min+" and price<="+max;
+	   	//该城市不存在
+	   	if(!rs.next()) {
+	   		statement.close();
+	   		connection.close();
+	   		return buildings;
+	   	}
+	   	sql = "SELECT bCode from buildCode where code="+rs.getInt("code");
 	   	rs = statement.executeQuery(sql);
+	   	//记录该城市下所有楼盘编号
 	   	ArrayList<Integer> bCodes = new ArrayList<Integer>();
 	   	while(rs.next())
 	   		bCodes.add(rs.getInt("bCode"));
+	   	sql = "SELECT top 2 time from house order by time desc";
+	   	rs = statement.executeQuery(sql);
+	   	rs.next();
+	   	String current = DateOperation.getStringDate(rs.getDate("time"));
+	   	rs.next();
+	   	String past = DateOperation.getStringDate(rs.getDate("time"));
 		for(int bCode : bCodes) {
+			sql = "SELECT id from house where bCode="+bCode+" and time='"+current+"' and price>="+min+" and price<="+max;
+			rs = statement.executeQuery(sql);
+			//若该楼盘没有户型均价处于价格区间内，则跳过该户型
+			if(!rs.next())
+				continue;
 			Building build = new Building();
 			sql = "SELECT * from buildCode where bCode="+bCode;
 			rs = statement.executeQuery(sql);
 			rs.next();
 			int code = rs.getInt("code");//记录下城市区域编号供后面使用
 			build.name = rs.getString("building");
+			build.value = rs.getInt("average");
 			build.photo = rs.getString("photo");
 			build.addr = rs.getString("address");
 			build.url = rs.getString("url");
-			//获取最近更新的平均价格
-			sql = "SELECT avg(price) as price from house where bCode="+bCode+" and time='"+time+"'";
+			//获取前一次的平均价格
+			sql = "SELECT avg(price) as price from house where bCode="+bCode+" and time='"+past+"'";
 			rs = statement.executeQuery(sql);
-			rs.next();
-			build.value = rs.getInt("price");
+			if(!rs.next())
+				build.id = 0;//0代表价格不变
+			else if(build.value > rs.getInt("price"))
+				build.id = 1;//1代表价格上涨
+			else if(build.value < rs.getInt("price"))
+				build.id = -1;//-1代表价格下降
+			else build.id = 0;
 	    	sql = "SELECT * from cityCode where code="+code;
 	    	rs = statement.executeQuery(sql);
 	    	rs.next();
@@ -604,6 +714,23 @@ public class DataInterview {
     	return 0;//0代表注册成功
 	}
 	
+	//该函数用于用户查询自己的个人信息，20190909龚灿，测试成功
+	//输入为用户名
+	public static ArrayList<String> queryMyself(String user) throws SQLException {
+		ArrayList<String> message = new ArrayList<String>();
+		Connection connection = DriverManager.getConnection(sqlurl);
+	   	Statement statement = connection.createStatement();
+	   	String sql = "SELECT sickname from account where username='"+user+"'";
+	   	ResultSet rs = statement.executeQuery(sql);
+	   	rs.next();
+	   	message.add(rs.getString("sickname"));
+	   	sql = "SELECT collectUrl from collection where username='"+user+"'";
+	   	rs = statement.executeQuery(sql);
+	   	while(rs.next())
+	   		message.add(rs.getString("collectUrl"));
+	   	return message;
+	}
+	
 	//该函数为更改密码函数，20190902龚灿，测试成功
 	//输入为用户名，旧密码，新密码，确认密码
 	public static int changePassword(String user, String oldPass, String newPass, String again) throws SQLException {
@@ -635,8 +762,7 @@ public class DataInterview {
 		//昵称最长为16位且不能为空，昵称只能包含字母，数字，汉字
 		if(newSick.length()>16 || newSick.length()==0)
 			return false;
-		String sickString = newSick.replaceAll("[^A-Za-z0-9\\u4E00-\\u9FA5]", "");
-		if(sickString.compareTo(newSick)!=0)
+		if(!sicknameFilter(newSick))
 			return false;
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
@@ -709,5 +835,29 @@ public class DataInterview {
 		if(passname.compareTo(pass)!=0)
 			return false;
 		return true;
+	}
+	
+	//中文过滤器，用于城市，区域，地址等，20190909龚灿，测试成功
+	private static boolean chineseFilter(String chi) {
+		String filter = chi.replaceAll("[^\\u4E00-\\u9FA5]", "");
+		if(filter.compareTo(chi)!=0)
+			return false;
+		else return true;
+	}
+	
+	//昵称过滤器，用于楼盘，户型，昵称等，20190909龚灿，测试成功
+	private static boolean sicknameFilter(String sick) {
+		String filter = sick.replaceAll("[^A-Za-z0-9\\u4E00-\\u9FA5]", "");
+		if(filter.compareTo(sick)!=0)
+			return false;
+		else return true;
+	}
+	
+	//网址过滤器，用于网址等，20190909龚灿，测试成功
+	private static boolean urlFilter(String url) {
+		String filter = url.replaceAll(" ", "");
+		if(filter.compareTo(url)!=0)
+			return false;
+		else return true;
 	}
 }
