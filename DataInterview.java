@@ -15,9 +15,9 @@ import java.util.Map;
 //测试中
 public class DataInterview {
 	//链接数据库服务器的字符串
-	private static String sqlurl = new String("jdbc:sqlserver://yuyanjia.database.chinacloudapi.cn:1433;database=experiment;"
-			+ "user=yuyanjia@yuyanjia;password=Qwer1234;encrypt=true;trustServerCertificate=false;"
-			+ "hostNameInCertificate=*.database.chinacloudapi.cn;loginTimeout=30;");
+	private static String sqlurl = new String("jdbc:sqlserver://silang.database.chinacloudapi.cn:1433;"
+			+ "database=experiment;user=silang@silang;password=Qwer1234;encrypt=true;"
+			+ "trustServerCertificate=false;hostNameInCertificate=*.database.chinacloudapi.cn;loginTimeout=30;");
 	private static HashMap<String, String> newBuild = new HashMap<String, String>();//key为楼盘名，value为区域名
 	static {
 		try {
@@ -846,8 +846,8 @@ public class DataInterview {
 	}
 	
 	//昵称过滤器，用于楼盘，户型，昵称等，20190909龚灿，测试成功
-	private static boolean sicknameFilter(String sick) {
-		String filter = sick.replaceAll("[^A-Za-z0-9\\u4E00-\\u9FA5]", "");
+	public static boolean sicknameFilter(String sick) {
+		String filter = sick.replaceAll("[^°·A-Za-z0-9\\u4E00-\\u9FA5]", "");
 		if(filter.compareTo(sick)!=0)
 			return false;
 		else return true;
