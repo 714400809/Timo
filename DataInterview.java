@@ -12,7 +12,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-//测试中
+//此类封装了所有访问数据库的函数，专用于数据库各种操作，测试中
+//创建人：龚灿	创建时间：20190823	最近更新时间：20190910
 public class DataInterview {
 	//链接数据库服务器的字符串
 	private static String sqlurl = new String("jdbc:sqlserver://silang.database.chinacloudapi.cn:1433;"
@@ -27,8 +28,9 @@ public class DataInterview {
 			e.printStackTrace();
 		}
 	}
-	//该函数用于向数据库cityCode中插入记录，20190823龚灿，测试成功
-	//输入分别为：市，区域
+	//该函数用于向数据库cityCode中插入记录，测试成功
+	//创建人：龚灿	创建时间：20190823	最近更新时间：20190909
+	//输入分别为：城市，区域，输出为插入记录结果true为成功，false为失败
 	public static boolean addCity(String cit, String reg) throws SQLException {
 		if(!chineseFilter(cit))
 			return false;
@@ -61,8 +63,9 @@ public class DataInterview {
     	return true;
 	}
 	
-	//该函数用于在数据库cityCode中删除记录，20190823龚灿，测试成功
-	//输入为：市或区域
+	//该函数用于在数据库cityCode中删除记录，测试成功
+	//创建人：龚灿	创建时间：20190823	最近更新时间：20190909
+	//输入为：城市或区域，无返回值
 	public static void deleteCity(String pos) throws SQLException {
 		if(!chineseFilter(pos))
 			return;
@@ -76,8 +79,9 @@ public class DataInterview {
     	connection.close();
 	}
 	
-	//该函数用于向数据库cityCode中查询区域对应的区域编号，20190823龚灿，测试成功
-	//输入为：城市，区域
+	//该函数用于向数据库cityCode中查询区域对应的区域编号，测试成功
+	//创建人：龚灿	创建时间：20190823	最近更新时间：20190824
+	//输入为：城市，区域，输出为区域编号
 	private static int queryCityCode(String cit, String reg) throws SQLException {
 		if(cit.charAt(cit.length()-1)=='市')
     		cit = cit.substring(0, cit.length()-1);
@@ -99,12 +103,15 @@ public class DataInterview {
     	return result;//结果为0说明该区域不存在
 	}
 	
-	//该函数用于向数据库buildCode中插入记录，20190827龚灿，测试成功
-	//输入分别为：区域，楼盘，图片路径，具体地址
+	//该函数用于向数据库buildCode中插入记录，测试成功
+	//创建人：龚灿	创建时间：20190826	最近更新时间：20190910
+	//输入分别为：区域，楼盘，图片路径，具体地址，输出为插入记录结果true为成功，false为失败
 	public static boolean addBuilding(String cit, String reg, String bui, String photo, String add) throws SQLException {
 		if(!chineseFilter(cit) || !chineseFilter(reg))
 			return false;
-		if(!sicknameFilter(bui) || !sicknameFilter(add))
+		if(!buildFilter(bui))
+			return false;
+		if(!sicknameFilter(add))
 			return false;
 		if(!urlFilter(photo))
 			return false;
@@ -136,8 +143,9 @@ public class DataInterview {
     	return true;
 	}
 	
-	//该函数用于在数据库buildingCode中删除记录，20190902龚灿，测试成功
-	//输入为：楼盘编号
+	//该函数用于在数据库buildingCode中删除记录，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为：楼盘编号，输出为删除记录结果true为成功，false为失败
 	public static boolean deleteBuilding(int bCo) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
@@ -156,8 +164,9 @@ public class DataInterview {
     	return true;
 	}
 	
-	//该函数用于向数据库buildCode中查询楼盘对应的楼盘编号，20190909龚灿，测试成功
-	//输入为：区域，楼盘
+	//该函数用于向数据库buildCode中查询楼盘对应的楼盘编号，测试成功
+	//创建人：龚灿	创建时间：20190826	最近更新时间：20190909
+	//输入为：区域，楼盘，输出为楼盘编号
 	private static int queryBCode(String reg, String bui) throws SQLException {
 		char r = reg.charAt(reg.length()-1);
     	if(r=='县'||r=='区'||r=='市') {
@@ -191,7 +200,9 @@ public class DataInterview {
     	return result;//结果为0说明该区域不存在
 	}
 	
-	//该函数用于辅助生成静态页面，20190906龚灿，测试成功
+	//该函数用于辅助生成静态页面，测试成功
+	//创建人：龚灿	创建时间：20190906	最近更新时间：20190906
+	//无需输入，输出为楼盘编号的最大值
 	public static int queryMaxBCode() throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
@@ -204,13 +215,16 @@ public class DataInterview {
     	return max;
 	}
 	
-	//该函数用于管理员查询新楼盘，20190904龚灿，测试成功
+	//该函数用于管理员查询新楼盘，测试成功
+	//创建人：龚灿	创建时间：20190904	最近更新时间：20190904
+	//无需输入，输出为包含新楼盘区域与名字信息的哈希表
 	public static HashMap<String, String> queryNewBuild() {
 		return newBuild;
 	}
 	
-	//该函数用于添加楼盘对应的静态网址，20190904龚灿，测试成功
-	//输入为楼盘编号，网址
+	//该函数用于添加楼盘对应的静态网址，测试成功
+	//创建人：龚灿	创建时间：20190904	最近更新时间：20190909
+	//输入为楼盘编号，网址，无返回值
 	public static void addUrl(int bCo, String url) throws SQLException {
 		if(!urlFilter(url))
 			return;
@@ -222,8 +236,9 @@ public class DataInterview {
     	connection.close();
 	}
 	
-	//该函数用于在数据库表buildCode中查询某楼盘的静态网址，20190904龚灿
-	//输入为楼盘编号
+	//该函数用于在数据库表buildCode中查询某楼盘的静态网址
+	//创建人：龚灿	创建时间：20190904	最近更新时间：20190904
+	//输入为楼盘编号，输出为楼盘对应网址
 	public static String queryUrl(int bCo) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
@@ -237,7 +252,9 @@ public class DataInterview {
     	return urlString;//结果为null说明该区域不存在
 	}
 	
-	//该函数专用于每天计算每个楼盘的当前均价，20190908龚灿
+	//该函数专用于每天计算每个楼盘的当前均价
+	//创建人：龚灿	创建时间：20190908	最近更新时间：20190908
+	//无输入输出
 	public static void updateAverage() throws SQLException {
 		int max = queryMaxBCode();
 		Connection connection = DriverManager.getConnection(sqlurl);
@@ -266,13 +283,16 @@ public class DataInterview {
     	connection.close();
 	}
 	
-	//该函数用于向数据库house中插入一整行城市区域小区房价信息，20190827龚灿，测试成功
-	//输入分别为：城市，区域，楼盘，户型，时间，房价，面积，图片路径
+	//该函数用于向数据库house中插入一整行城市区域小区房价信息，测试成功
+	//创建人：龚灿	创建时间：20190827	最近更新时间：20190910
+	//输入分别为：城市，区域，楼盘，户型，时间，房价，面积，图片路径，输出为插入记录结果true为成功，false为失败
     public static boolean addHouse(String reg, String bui, String typ, String tim, 
     		int pri, int are, String url) throws SQLException, ParseException{
     	if(!chineseFilter(reg))
     		return false;
-    	if(!sicknameFilter(bui) || !sicknameFilter(typ))
+    	if(!buildFilter(bui))
+    		return false;
+    	if(!sicknameFilter(typ))
     		return false;
     	if(!urlFilter(url))
     		return false;
@@ -297,7 +317,8 @@ public class DataInterview {
     }
     
     //该函数用于删除具体楼盘户型的所有相关数据，20190904龚灿
-    //输入为时间(String yyyy-MM-dd)
+    //创建人：龚灿	创建时间：20190904	最近更新时间：20190904
+    //输入为时间(String yyyy-MM-dd)，输出为删除记录结果true为成功，false为失败
     public static boolean deleteHouse(String tim) throws SQLException {
     	if(tim.compareTo(DateOperation.getPastFirst(11))!=-1)
     		return false;
@@ -310,12 +331,15 @@ public class DataInterview {
     	return true;
     }
     
-    //该函数用于管理员更正错误数据或不合理数据，20190909龚灿
-    //输入为区域，楼盘名，户型，新价格，新建面
+    //该函数用于管理员更正错误数据或不合理数据
+    //创建人：龚灿	创建时间：20190909	最近更新时间：20190910
+    //输入为区域，楼盘名，户型，新价格，新建面，输出为更正结果true为成功，false为失败
     public static boolean updateHouse(String reg, String bui, String typ, int pri, int are) throws SQLException {
     	if(!chineseFilter(reg))
     		return false;
-    	if(!sicknameFilter(bui) || !sicknameFilter(typ))
+    	if(!buildFilter(bui))
+    		return false;
+    	if(!sicknameFilter(typ))
     		return false;
     	int bCode = queryBCode(reg, bui);
     	if(bCode==0)
@@ -329,7 +353,9 @@ public class DataInterview {
     	return true;
     }
     
-    //该函数用于查house表，按时间排序，20190906龚灿
+    //该函数用于查house表，按时间排序
+    //创建人：龚灿	创建时间：20190906	最近更新时间：20190906
+    //无需输入，输出为包含时间信息的数组
     public static ArrayList<String> tableTime() throws SQLException {
     	ArrayList<String> time = new ArrayList<String>();
     	Connection connection = DriverManager.getConnection(sqlurl);
@@ -343,10 +369,11 @@ public class DataInterview {
 		return time;
     }
     
-    //该函数判断用户输入的pos具体是什么位置信息，并以不同方式调用queryCity，20190824龚灿
-    //输入为：市或区域或楼盘
+    //该函数判断用户输入的pos具体是什么位置信息，并以不同方式调用queryCity
+    //创建人：龚灿	创建时间：20190824	最近更新时间：20190910
+    //输入为：市或区域或楼盘，输出为数据包数组
     public static DataPacket[] queryAll(String pos) throws SQLException, ParseException{
-    	if(!chineseFilter(pos))
+    	if(!buildFilter(pos))
     		return null;
     	Connection connection = DriverManager.getConnection(sqlurl);
     	Statement statement = connection.createStatement();
@@ -413,8 +440,9 @@ public class DataInterview {
     	}
     }
 
-    //该函数用于获取特定城市的所有房价信息，20190827龚灿
-    //输入为城市名
+    //该函数用于获取特定城市的所有房价信息
+    //创建人：龚灿	创建时间：20190824	最近更新时间：20190902
+    //输入为城市名，输出为数据包
 	private static DataPacket queryCity(String cit) throws SQLException, ParseException {
 		// TODO Auto-generated method stub
 		DataPacket dataPacket = new DataPacket();
@@ -444,8 +472,9 @@ public class DataInterview {
 		return dataPacket;
 	}
 	
-	//此函数用于获取特定区域的所有房价信息，20190908龚灿
-	//输入为城市，区域
+	//此函数用于获取特定区域的所有房价信息
+	//创建人：龚灿	创建时间：20190808	最近更新时间：20190909
+	//输入为城市，区域，输出为数据包
 	public static DataPacket queryRegion(String cit, String reg) throws SQLException {
 		if(!chineseFilter(cit) || !chineseFilter(reg))
 			return null;
@@ -484,8 +513,9 @@ public class DataInterview {
     	return dataPacket;
 	}
 	
-	//该函数用于获取特定楼盘的所有房价信息，20190905龚灿，测试成功
-    //输入为楼盘编号
+	//该函数用于获取特定楼盘的所有房价信息，测试成功
+	//创建人：龚灿	创建时间：20190905	最近更新时间：20190905
+    //输入为楼盘编号，输出为数据包
 	private static DataPacket queryBuild(int bCo) throws SQLException {
 		DataPacket dataPacket = new DataPacket();
 		Region region = new Region();
@@ -515,8 +545,9 @@ public class DataInterview {
     	return dataPacket;
 	}
 	
-	//该函数用于预测楼盘房价并返回楼盘所有具体信息，20190905龚灿
-	//输入为楼盘编号
+	//该函数用于预测楼盘房价并返回楼盘所有具体信息
+	//创建人：龚灿	创建时间：20190905	最近更新时间：20190905
+	//输入为楼盘编号，输出为楼盘对象
 	public static Building foreseeBuild(int bCo) throws SQLException, ParseException {
 		Building build = new Building();
 		Connection connection = DriverManager.getConnection(sqlurl);
@@ -567,8 +598,9 @@ public class DataInterview {
     	return build;
 	}
 	
-	//该函数用于填充Building对象的values数组，20190827龚灿，测试成功
-	//输入为楼盘编号
+	//该函数用于填充Building对象的values数组，测试成功
+	//创建人：龚灿	创建时间：20190827	最近更新时间：20190827
+	//输入为楼盘编号，输出为包含预测信息的int数组
 	private static int[] getValues(int bCo) throws SQLException {
 		int[] values = new int[14];
 		for(int i=0;i<14;i++)
@@ -596,8 +628,9 @@ public class DataInterview {
 		return values;
 	}
 
-	//该函数用于房价对比功能，寻找到价格区间内的楼盘并将其相关信息返回，20190906龚灿，测试成功
-	//输入为价格区间
+	//该函数用于房价对比功能，寻找到价格区间内的楼盘并将其相关信息返回，测试成功
+	//创建人：龚灿	创建时间：20190906	最近更新时间：20190909
+	//输入为价格区间，输出为符合条件的所有楼盘对象的数组
 	public static ArrayList<Building> compareBuild(int min, int max, String cit) throws SQLException {
 		ArrayList<Building> buildings = new ArrayList<Building>();
 		if(!chineseFilter(cit))
@@ -664,8 +697,9 @@ public class DataInterview {
 	   	return buildings;
 	}
 	
-	//该函数为登录函数，20190903龚灿，测试成功
-	//输入为用户名，密码，IP地址
+	//该函数为登录函数，测试成功
+	//创建人：龚灿	创建时间：20190903	最近更新时间：20190903
+	//输入为用户名，密码，IP地址，输出为登录结果
 	public static int login(String user, String pass) throws SQLException {
 		if(!isSuitable(user, pass))
 			return 2;//2代表用户名或密码格式错误
@@ -690,8 +724,9 @@ public class DataInterview {
     	return statue;//0为普通用户，1为管理员登录
 	}
 	
-	//该函数为注册函数，20190902龚灿，测试成功
-	//输入为用户名，密码
+	//该函数为注册函数，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为用户名，密码，输出为注册结果
 	public static int register(String user, String pass) throws SQLException {
 		if(!isSuitable(user, pass))
 			return 1;//1代表用户名或密码格式错误
@@ -714,25 +749,24 @@ public class DataInterview {
     	return 0;//0代表注册成功
 	}
 	
-	//该函数用于用户查询自己的个人信息，20190909龚灿，测试成功
-	//输入为用户名
-	public static ArrayList<String> queryMyself(String user) throws SQLException {
-		ArrayList<String> message = new ArrayList<String>();
+	//该函数用于用户查询自己的个人信息，测试成功
+	//创建人：龚灿	创建时间：20190905	最近更新时间：20190905
+	//输入为用户名，输出为昵称
+	public static String queryMyself(String user) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
 	   	String sql = "SELECT sickname from account where username='"+user+"'";
 	   	ResultSet rs = statement.executeQuery(sql);
 	   	rs.next();
-	   	message.add(rs.getString("sickname"));
-	   	sql = "SELECT collectUrl from collection where username='"+user+"'";
-	   	rs = statement.executeQuery(sql);
-	   	while(rs.next())
-	   		message.add(rs.getString("collectUrl"));
-	   	return message;
+	   	String sick = rs.getString("sickname");
+	   	statement.close();
+	   	connection.close();
+	   	return sick;
 	}
 	
-	//该函数为更改密码函数，20190902龚灿，测试成功
-	//输入为用户名，旧密码，新密码，确认密码
+	//该函数为更改密码函数，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为用户名，旧密码，新密码，确认密码，输出为更改结果
 	public static int changePassword(String user, String oldPass, String newPass, String again) throws SQLException {
 		if(!isSuitable(newPass, again))
 			return 1;//1代表新密码格式错误
@@ -756,8 +790,9 @@ public class DataInterview {
 	   	return 0;//0代表更改密码成功
 	}
 
-	//该函数为更改昵称函数，20190902龚灿，测试成功
-	//输入为用户名，新昵称
+	//该函数为更改昵称函数，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190909
+	//输入为用户名，新昵称，输出为更改结果
 	public static boolean changeSickname(String user, String newSick) throws SQLException {
 		//昵称最长为16位且不能为空，昵称只能包含字母，数字，汉字
 		if(newSick.length()>16 || newSick.length()==0)
@@ -773,8 +808,9 @@ public class DataInterview {
 	   	return true;
 	}
 	
-	//该函数为添加收藏函数，20190902龚灿，测试成功
-	//输入为用户名，待收藏网址
+	//该函数为添加收藏函数，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为用户名，待收藏网址，输出为收藏结果true代表成功，false代表已收藏（失败）
 	public static boolean addCollect(String user, String coll) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
@@ -794,8 +830,9 @@ public class DataInterview {
 		return true;
 	}
 
-	//该函数为添加收藏函数，20190902龚灿，测试成功
-	//输入为用户名，已收藏网址
+	//该函数为添加收藏函数，测试成功
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为用户名，已收藏网址，无返回值
 	public static void deleteCollect(String user, String coll) throws SQLException {
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
@@ -805,23 +842,42 @@ public class DataInterview {
 	   	connection.close();
 	}
 	
-	//该函数为查询收藏函数，20190903龚灿，测试成功
-	//输入为用户名
-	public static ArrayList<String> queryCollect(String user) throws SQLException {
-		ArrayList<String> collections = new ArrayList<String>();
+	//该函数为查询收藏函数
+	//创建人：龚灿	创建时间：20190903	最近更新时间：20190903
+	//输入为用户名，输出为收藏的所有楼盘的数组
+	public static ArrayList<Building> queryCollect(String user) throws SQLException {
+		ArrayList<Building> buildings = new ArrayList<Building>();
 		Connection connection = DriverManager.getConnection(sqlurl);
 	   	Statement statement = connection.createStatement();
 	   	String sql = "SELECT collectUrl from collection where username='"+user+"'";
     	ResultSet rs = statement.executeQuery(sql);
+    	ArrayList<String> collections = new ArrayList<String>();
     	while(rs.next())
     		collections.add(rs.getString("collectUrl"));
+    	for(String coll : collections) {
+    		Building build = new Building();
+    		sql = "SELECT * from buildCode where url='"+coll+"'";
+    		rs = statement.executeQuery(sql);
+    		rs.next();
+    		build.name = rs.getString("building");
+    		build.value = rs.getInt("average");
+    		build.photo = rs.getString("photo");
+    		build.addr = rs.getString("address");
+    		build.url = coll;
+    		sql = "SELECT * from cityCode where code="+rs.getInt("code");
+    		rs = statement.executeQuery(sql);
+    		rs.next();
+    		build.addr = rs.getString("city")+rs.getString("region")+build.addr;
+    		buildings.add(build);
+    	}
     	statement.close();
 	   	connection.close();
-		return collections;
+		return buildings;
 	}
 	
 	//该函数为验证用户名与密码是否符合格式要求，20190902龚灿，测试成功
-	//输入为用户名，密码
+	//创建人：龚灿	创建时间：20190902	最近更新时间：20190902
+	//输入为用户名，密码，输出为检验结果true为通过，false为不合格
 	private static boolean isSuitable(String user, String pass) {
 		//用户名和密码均为6-16位，只能包含数字与字母
 		if(user.length()>16 || user.length()<6)
@@ -837,7 +893,9 @@ public class DataInterview {
 		return true;
 	}
 	
-	//中文过滤器，用于城市，区域，地址等，20190909龚灿，测试成功
+	//中文过滤器，用于城市，区域，地址等，测试成功
+	//创建人：龚灿	创建时间：20190909	最近更新时间：20190909
+	//输入为待检验字符串，输出为检验结果true为通过，false为不合格
 	private static boolean chineseFilter(String chi) {
 		String filter = chi.replaceAll("[^\\u4E00-\\u9FA5]", "");
 		if(filter.compareTo(chi)!=0)
@@ -845,15 +903,29 @@ public class DataInterview {
 		else return true;
 	}
 	
-	//昵称过滤器，用于楼盘，户型，昵称等，20190909龚灿，测试成功
-	public static boolean sicknameFilter(String sick) {
-		String filter = sick.replaceAll("[^°·A-Za-z0-9\\u4E00-\\u9FA5]", "");
+	//楼盘过滤器，用于楼盘等，测试成功
+	//创建人：龚灿	创建时间：20190910	最近更新时间：20190910
+	//输入为待检验字符串，输出为检验结果true为通过，false为不合格
+	private static boolean buildFilter(String bui) {
+		String filter = bui.replaceAll("[^°·)(A-Za-z0-9\\u4E00-\\u9FA5]", "");
+		if(filter.compareTo(bui)!=0)
+			return false;
+		else return true;
+	}
+	
+	//昵称过滤器，用于户型，昵称等，测试成功
+	//创建人：龚灿	创建时间：20190909	最近更新时间：20190909
+	//输入为待检验字符串，输出为检验结果true为通过，false为不合格
+	private static boolean sicknameFilter(String sick) {
+		String filter = sick.replaceAll("[^A-Za-z0-9\\u4E00-\\u9FA5]", "");
 		if(filter.compareTo(sick)!=0)
 			return false;
 		else return true;
 	}
 	
-	//网址过滤器，用于网址等，20190909龚灿，测试成功
+	//网址过滤器，用于网址等，测试成功
+	//创建人：龚灿	创建时间：20190909	最近更新时间：20190909
+	//输入为待检验字符串，输出为检验结果true为通过，false为不合格
 	private static boolean urlFilter(String url) {
 		String filter = url.replaceAll(" ", "");
 		if(filter.compareTo(url)!=0)
