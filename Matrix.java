@@ -1,12 +1,12 @@
 package com.db;
 
-//测试成功
+//此类专用于生成静态页面时根据楼盘名缩写生成对应网址，测试成功
+//创建人：龚灿	创建时间：20190828	最近更新时间：20190829
 public class Matrix {
-	double[][] matrix;
-	int xsize;
-	int ysize;
-	//构造函数，20190828龚灿
-	//输入为矩阵行数，列数
+	double[][] matrix;//矩阵
+	int xsize;//行数
+	int ysize;//列数
+	
 	public Matrix(int xs, int ys) {
 		if(xs>0 && ys>0) {
 			xsize = xs;
@@ -19,7 +19,9 @@ public class Matrix {
 		else matrix=null;
 	}
 
-	//该函数用于计算方阵的逆矩阵，20190828龚灿，测试成功
+	//该函数用于计算方阵的逆矩阵，测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190828
+	//无需输入，输出为逆矩阵
 	Matrix getInverseMatrix() {
 		if(xsize!=ysize)
 			return null;
@@ -33,8 +35,9 @@ public class Matrix {
 		return inverserMatrix;
 	}
 	
-	//该函数为矩阵乘法函数，20190828龚灿，测试成功
-	//输入为另一个相乘矩阵
+	//该函数为矩阵乘法函数，测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190828
+	//输入为另一个相乘矩阵，输出为相乘的积矩阵
 	Matrix multMatrix(Matrix other) {
 		if(ysize!=other.xsize)
 			return null;
@@ -46,7 +49,9 @@ public class Matrix {
 		return multResult;
 	}
 	
-	//该函数用于计算矩阵对应的行列式的值，20190829龚灿（仅适用于行列相等），测试成功
+	//该函数用于计算矩阵对应的行列式的值（仅适用于行列相等），测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190829
+	//无需输入，输出为行列式的值
 	private double getDeterminant() {
 		if(xsize!=ysize)
 			return 0;
@@ -105,8 +110,9 @@ public class Matrix {
         return result;
 	}
 	
-	//该函数用于计算代数余子式，20190828龚灿，测试成功
-	//输入为删除的第行数与列数
+	//该函数用于计算代数余子式，测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190829
+	//输入为删除的第行数与列数，输出为代数余子式的值
 	private double getCofactor(int i, int j) {
 		Matrix cofactor = new Matrix(xsize-1,ysize-1);
 		for(int a=1;a<i;a++) {
