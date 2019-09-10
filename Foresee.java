@@ -2,11 +2,12 @@ package com.db;
 
 import java.util.ArrayList;
 
-//测试中
-//多项式曲线拟合预测未来两个月房价
+//此类专用于预测房价，包含曲线拟合与误差对比两个功能，测试成功
+//创建人：龚灿	创建时间：20190828	最近更新时间：20190906
 public class Foresee {
-	//该函数用于预测未来两个月的房价，并将预测结果储存在values中，20190828龚灿，测试成功
-	//输入为values数组，values[0]到values[11]是过去一年的数据
+	//该函数调用多项式曲线拟合，并取误差最小的函数进行预测，并将预测结果储存在values中，测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190906
+	//输入为values数组，values[0]到values[11]是过去一年的数据，无返回值
 	static void foresee(int[] values) {
 		ArrayList<Integer> nonZero = new ArrayList<Integer>();
 		for(int i=0;i<12;i++)
@@ -29,8 +30,9 @@ public class Foresee {
 		values[13] = (int)bestPoly.getValue(13);
 	}
 	
-	//该函数用于进行多项式曲线拟合，并将多项式返回，20190829龚灿，测试成功
-	//输入为多项式最高次n和values数组，values[0]到values[11]是过去一年的数据
+	//该函数用于进行多项式曲线拟合，并将多项式返回，测试成功
+	//创建人：龚灿	创建时间：20190828	最近更新时间：20190905
+	//输入为多项式最高次n和values数组，values[0]到values[11]是过去一年的数据，输出为多项式拟合函数
 	//备注：n个点最多拟合到n-1次多项式，否则会出现冗余方程使得行列式为0
 	static Polynomial curveFitting(int n, int[] values) {
 		ArrayList<Integer> nonZero = new ArrayList<Integer>();
@@ -74,9 +76,11 @@ public class Foresee {
 		}
 		Matrix coefficientMatrix = leftMatrix.getInverseMatrix().multMatrix(rightMatrix);
 		Polynomial poly = new Polynomial(n);
+		//存储拟合结果
 		for(int i=0;i<=n;i++)
 			poly.coefficients[i] = coefficientMatrix.matrix[i+1][1];
 	    double errorValue = 0.0;
+	    //计算误差
 	    for(int k : nonZero)
 	    	errorValue += (poly.getValue(k)-values[k])*(poly.getValue(k)-values[k]);
 	    poly.errorValue = errorValue/nonZero.size();
